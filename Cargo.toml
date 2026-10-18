@@ -1,0 +1,29 @@
+[package]
+name = "openpdn"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+description = "A native Rust image editor pursuing Paint.NET 5.1.12 parity"
+
+[dependencies]
+anyhow = "1"
+arboard = { version = "=3.6.1", features = ["wayland-data-control"] }
+bytemuck = { version = "1", features = ["derive"] }
+cosmic-text = "=0.19.0"
+eframe = { version = "=0.36.2", default-features = false, features = ["default_fonts", "wgpu", "wayland", "x11", "persistence", "accesskit"] }
+flate2 = "1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "tiff", "webp", "qoi"] }
+libm = "=0.2.16"
+pollster = "0.4"
+rfd = "0.15"
+roxmltree = "0.21"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tempfile = "3"
+tiny-skia = "=0.12.0"
+unicode-general-category = "=1.1.0"
+zip = { version = "6", default-features = false, features = ["deflate"] }
+
+[profile.release]
+lto = "thin"
+strip = true

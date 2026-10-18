@@ -1,0 +1,390 @@
+{
+  "baseline": "Paint.NET 5.1.12 x64",
+  "reference_release_date": "2026-03-08",
+  "inspection_date": "2026-10-12",
+  "observed_setup_file_version": "5.112.9563.32325",
+  "decompiler": "ILSpyCmd 11.1.0.9782",
+  "oracle": "Original CompositionOps, FloodFillAlgorithm, PosterizeEffect2, GradientShapes/Repeaters/ColorBgra.Blend, LevelsParameters, FunctionInterpolator, BezierSplineUtil, TextTool navigation/deletion, brush plans/aliased stamps/centripetal smoothing, rectangle bounds, resolution conversions, palette parsing/defaults and integer RGB/HSV conversions, ColorPickerTool averaging, ColorBgra.Overwrite, GaussianBlurConvolutionEffect, PdnAddNoiseEffect lookup generation, HlslRandom, OctreeQuantizer, ProximityPaletteMap and PDN serialization managed IL executed using .NET 10.0.12 on Linux with ReadyToRun disabled; PDN and spline heap imports use the developer allocation shim",
+  "opaque_channel_cases": 917504,
+  "mixed_alpha_opacity_cases": 2688,
+  "flood_color_pairs": 4096,
+  "posterize_table_entries": 16128,
+  "gradient_geometry_samples": 3927,
+  "gradient_color_blends": 4096,
+  "levels_rgb_samples": 4608,
+  "curve_spline_samples": 4096,
+  "gaussian_point_kernels": 7,
+  "noise_lookup_entries": 16384,
+  "pcg_random_cases": 4096,
+  "native_temperature_gain_pairs": 621,
+  "octree_unique_population_palettes": 48,
+  "proximity_palette_queries": 24576,
+  "line_natural_spline_cases": 64,
+  "line_constraint_cases": 256,
+  "inline_text_editing_cases": 512,
+  "color_picker_average_cases": 256,
+  "selection_rectangle_cases": 768,
+  "measurement_conversion_cases": 117,
+  "resize_constrainer_traces": 128,
+  "resize_constrainer_states": 1408,
+  "resolution_metadata_write_cases": 11,
+  "palette_parser_cases": 25,
+  "palette_file_encoding_cases": 8,
+  "palette_library_padding_cases": 6,
+  "default_palette_colors": 96,
+  "integer_rgb_hsv_cases": 2048,
+  "color_wheel_gesture_cases": 512,
+  "color_wheel_pixel_cases": 512,
+  "color_wheel_oracle_substitution": "Original GrabColor and wheel pixel IL cloned to DynamicMethod. Center/radius/snap field reads are replaced by constant providers; the original pure HSV pixel method is also cloned to avoid Windows UI static initialization. Numerical IL is retained.",
+  "selection_oracle_substitution": "Original rectangle IL cloned to DynamicMethod with only Tool.get_Document replaced by a provider of an original Document, avoiding unrelated Windows UI static initialization. Numerical IL and original Document conversion calls are retained.",
+  "brush_plan_cases": 256,
+  "brush_aliased_stamp_cases": 256,
+  "brush_smoothing_cases": 128,
+  "drawing_overwrite_pixel_cases": 4096,
+  "native_gaussian_optimization_kernel_cases": 45,
+  "native_hatch_tiles": 53,
+  "native_hatch_color_variants": 4,
+  "native_hatch_oracle": "GDI+ 10.0.19041.329 under Wine; original HatchBrush bitmap API sequence at 96 DPI, with missing GetDCDpiScaleValue substituted by integer multiplier one. Monochrome coverage is exact; partially transparent color interpolation is not certified.",
+  "bokeh_complete_kernels": 30,
+  "sketch_sample_maps": 16,
+  "native_turbulence_grids": 6,
+  "native_red_eye_pixel_cases": 50,
+  "native_red_eye_analysis_tables": 50,
+  "native_red_eye_oracle": "Microsoft GDI+ 10.0.19041.329 executed through its native API under Wine; 50 original pixel results and traced polar analysis tables, including MXCSR round-down and retained area/strength accumulators. No GDI+ code is linked into the Rust runtime.",
+  "native_direct2d_oracle": "Microsoft symbol server d2d1.dll 10.0.19041.329; CalculateGains emulated with Unicorn 2.1.4, bounded instruction count and host sqrtf; shader recovery details in filter-reference.md",
+  "pdn_fixtures": "Original SaveToStream (14 blends and multichunk surfaces), plus original legacy gzip/inline serialization",
+  "inputs": [
+    {
+      "path": "paint.net.5.1.12.install.x64.zip",
+      "bytes": 84238734,
+      "sha256": "3cd861b5af3f85bd28666d4a9017d03de237c08ad0103ee9d92b2cd921f8c867"
+    },
+    {
+      "path": "reference/installer/paint.net.5.1.12.install.x64.exe",
+      "bytes": 84380680,
+      "sha256": "9c34b285eabcc4658335ad91f9c76ccf8f96d939b9640fac08e4942e394e1e8d"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Base.dll",
+      "bytes": 1781032,
+      "sha256": "08f69be0cfff52b32377d568a649d93e8eb633af0e235fc4da7ed2ba2c25e2a8"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Collections.dll",
+      "bytes": 1416488,
+      "sha256": "dce3ff02f2b892fd89c8b83ecacf32efc8ec0aaca2a1b2880935fdfa19c6808c"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.ComponentModel.dll",
+      "bytes": 453928,
+      "sha256": "7910ef2bed32b31ec59ec805783f4dcbb5f95ace1f2dc858bbc9afb98bd26798"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Core.dll",
+      "bytes": 10087720,
+      "sha256": "1c41343eebf957b92ca03f19fca4ba4d1c7747d2aaa1ce208b1fc16611478b63"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Data.dll",
+      "bytes": 1695016,
+      "sha256": "eeb9145c737c679d7853092d8a28b6a5e98a3e69c78573d5bcecd1ca0de4fd72"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Effects.Core.dll",
+      "bytes": 2006312,
+      "sha256": "85ef51ed721f7d631195fc736955b31d6cf37ac4ad9f51bdf4df15c97cad8153"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Effects.Gpu.dll",
+      "bytes": 4447528,
+      "sha256": "2be6b799692bfd2d643cc51b1e13b8489e7f412187753f31caadbb91f47df978"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Effects.Legacy.dll",
+      "bytes": 1772840,
+      "sha256": "37ed5982bb12428348dc156128a2e8a227c9ef4e5d06b6b30ae9072f6f3d5a08"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Effects.dll",
+      "bytes": 781608,
+      "sha256": "af8735816fc83187af7c16fa20f1b98a557a7a2f62742585d33ab2b5ee43e68b"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Framework.dll",
+      "bytes": 5045544,
+      "sha256": "ebaf8cb0995c15039679b579a60aa8b439ff7e0dbf7a70646283a629045fb035"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Fundamentals.dll",
+      "bytes": 2583848,
+      "sha256": "51dcb869218bfbd9a13d2da44babcf926bcabd62384be14cae474e7a1a724f6d"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.ObjectModel.dll",
+      "bytes": 1408296,
+      "sha256": "0c08b7f709bc522f57fc0ab1c6e94ecbbaf505fb17c18c1a16486ee41c89158e"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Plugins.Compatibility.dll",
+      "bytes": 60712,
+      "sha256": "e12738ff8f51b67878bbe25e74e167029d1aaf2724708fa8bd2696cd2282364e"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Primitives.dll",
+      "bytes": 2858280,
+      "sha256": "8a3057e7e022f37fe53cb3e27fcb4049bb43be1fc1b54672a19057d564a2fa03"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.PropertySystem.dll",
+      "bytes": 785704,
+      "sha256": "42d077d8ac45ad8f3c40c0c68be75e8dedd29eb7db7e48daa09d183bac7c8405"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Resources.dll",
+      "bytes": 1912104,
+      "sha256": "040f871ce78104e148100c76c634aa2882d46e5500784f24d5a8b73533662f9d"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Runtime.dll",
+      "bytes": 597288,
+      "sha256": "ab1c1b1f09a5fdb0199cfc6eac013be7596c603563e21a0bc4fae7eb4afc3259"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.ShellExtension.x64.dll",
+      "bytes": 49448,
+      "sha256": "0a85c45b3adfbddffdccdd96b21ebfade19dffb181ef517c25a094db18b0c173"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.SystemLayer.Native.x64.dll",
+      "bytes": 63272,
+      "sha256": "d6bb56b1f63b7ee8e768bebb94f4e5e1403e3e6472b1a5b74fe5f6accb246c88"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.SystemLayer.dll",
+      "bytes": 1809704,
+      "sha256": "4d3cef1dd2344920b1435cf984f5bc308475cbf734a0bf05dbeb7e31b44b6822"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Systrace.dll",
+      "bytes": 384296,
+      "sha256": "e400a29df79788e3a318a88bc364d19465ccf6786826c74a0a81f3bf7a7bf041"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.UI.dll",
+      "bytes": 4017448,
+      "sha256": "4cf348305911f80985f877236fe48d3d9a6b5cde3b345518d4909b1a275f9254"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Windows.Core.dll",
+      "bytes": 4009256,
+      "sha256": "dbfbaf6d502cca08bd90dc1a7ec011008b8adbc045d639781a833e7cc441ee73"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Windows.Framework.dll",
+      "bytes": 21466408,
+      "sha256": "d119c6ab8ad9c8a3ce7cd5b33647acfa6129380e18fb73917a151a37ab130425"
+    },
+    {
+      "path": "reference/extracted/x64/PaintDotNet.Windows.dll",
+      "bytes": 6876456,
+      "sha256": "4f6668196c82dd640587367431e666c1daeaf8713750c447d47e9fce6e221603"
+    },
+    {
+      "path": "reference/extracted/x64/paintdotnet.dll",
+      "bytes": 19610920,
+      "sha256": "313fad2fb569baf7248a69d1cb981fd713187270abaee64849a723db90013aba"
+    },
+    {
+      "path": "reference/extracted/x64/License.txt",
+      "bytes": 1565,
+      "sha256": "5edb9439e3f86f7a4490e70953fcf187275861c8f478325b7976186b4cdcd7e5"
+    },
+    {
+      "path": "reference/native-d2d/d2d1.dll",
+      "bytes": 6069888,
+      "sha256": "b1f99c4fd6cc6312f1991fea07363c71df09c47005e9eac488c7cafd399ba498"
+    },
+    {
+      "path": "reference/native-d2d/d2d1.pdb",
+      "bytes": 6934528,
+      "sha256": "76b5c56b5b12922a47ee7c7605becadf618994ed0998e7d16f24f6f7e7c2d0af"
+    },
+    {
+      "path": "reference/native-gdiplus/gdiplus.dll",
+      "bytes": 1710080,
+      "sha256": "7765be8d676c17aeca32086ba8e33b750fbca0fcc1e85067b5202217c08f0462"
+    },
+    {
+      "path": "reference/native-gdiplus/gdiplus.pdb",
+      "bytes": 1650688,
+      "sha256": "17212f2079d1a635caf39f167e4af4dc6cbd991e0c443479869ad3229a65ad11"
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-blend-components.bin",
+      "bytes": 917504,
+      "sha256": "ec3824746a90cda4abadba63a2cd3a293b9f7c60012f618eb9559bc72b31266c"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-blends.json",
+      "bytes": 329844,
+      "sha256": "80d1393116fd12ac8cc531b5f032e1ea4718cb4695547536131f4ed1f96c6af4"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-bokeh.json",
+      "bytes": 93324,
+      "sha256": "1e1da07943d0ca5847f91d817e27c045243ca5d4b72aab111f2d1cb8904e39a1"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-brush.json",
+      "bytes": 118889,
+      "sha256": "f18e196a40fdc61b55b02fdbf24ee1b6a316b230df1ab82284736298e9aa0ce1"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-effect-tables.json",
+      "bytes": 7478,
+      "sha256": "2df1f4a842cbf397ae4dad667cc75df3ac15ba5474e4457704844dc1e810bed3"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-flood.json",
+      "bytes": 310674,
+      "sha256": "777eae4888ed42a287f66b83aa1102471b40b5212aa032848017cc671cbbf271"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-gaussian.json",
+      "bytes": 18486,
+      "sha256": "586424b36da7b7d2d3f110b56922375c7dd4987f7c192d22b437f800537bae43"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-gradients.json",
+      "bytes": 95415,
+      "sha256": "e66f2b80fadf68bd83c7b2a16f1790afdc390e069da50782ba5169f6c57b0d10"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-line-constraints.json",
+      "bytes": 51655,
+      "sha256": "0b7df1e6ce67f8704b57084612c76a84687974c9bbdc1554ff33a7f58eb04cb3"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-line-spline.json",
+      "bytes": 33852,
+      "sha256": "eec7d7004ba90c87f1349a4c7c8480abc3363a66943a6a78237d792606e7740a"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-noise.json",
+      "bytes": 442487,
+      "sha256": "d19283a2c56899540140a3e5aee7f97c9b9fbc2fb189273ef861fad245ff665f"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-octree.json",
+      "bytes": 91099,
+      "sha256": "b4a19205f80f3ce2c4682328b33bf327e786cf203dc660dac5f45aec86b8fc7a"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-overwrite.json",
+      "bytes": 352706,
+      "sha256": "ade442cf575c5c593ea4ee5abcab1d982168c712b3d95e81b835c394f26284db"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-palettes.json",
+      "bytes": 191055,
+      "sha256": "75ef5f01ad9339d645c03ce6218dcf981f2d6016ef25604104a8a07828045253"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-picker.json",
+      "bytes": 1685482,
+      "sha256": "21ad5dd266641885058458977a4c3d557d419030dbd0d1b1fe1fb190c1699181"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-posterize.bin",
+      "bytes": 16128,
+      "sha256": "40de0255e4209dbc97a3a8400786f5c7614308f28298a8c8e60108dcc03930e7"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-proximity.json",
+      "bytes": 921120,
+      "sha256": "37c640244dd7cbb3768f00fcdfea456da6762b4c0f2315230459327fe50af55c"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-resolution.json",
+      "bytes": 310568,
+      "sha256": "ccbbeccaa7b19ddb8ab10c48613e6c82b75f93cfa88a21ce02e81a4e11e0e7c6"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-selection.json",
+      "bytes": 39585,
+      "sha256": "5af70b5271824aed64cd2cab117244419ce34e8bd8d52ffdd7441f1ce9c890b5"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-sketch.json",
+      "bytes": 31156,
+      "sha256": "073f88015e32e6c937c5ad07ab9f62c5d27a5c48791cc8d26d8d2e3be8880031"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-text.json",
+      "bytes": 102650,
+      "sha256": "b50280d11a8e0dcf890c7a60bfd3f32fb7ad8e38ba4592092832cf6cfa12055e"
+    },
+    {
+      "path": "tests/fixtures/paintnet-5.1.12-tonal.json",
+      "bytes": 204344,
+      "sha256": "db22847f96a6b0d01786720060fa50f398913cf45d1f84135a013332824baf2c"
+    },
+    {
+      "path": "tests/fixtures/pdn/chunks.json",
+      "bytes": 2150936,
+      "sha256": "cdb05b9f4f00895c6a7c9ddacbc8a3af0cfb42c44c6b27f7b23204fb11065a17"
+    },
+    {
+      "path": "tests/fixtures/pdn/chunks.pdn",
+      "bytes": 532003,
+      "sha256": "40276123b974fe24331140182c9ce4f9e4e769064a144ce982456388b832f82c"
+    },
+    {
+      "path": "tests/fixtures/pdn/small-legacy.pdn",
+      "bytes": 4027,
+      "sha256": "a0e90205ef96193725dd7a13133f0911ae5a0d2b8ca2d3c8f8591b794cba80bd"
+    },
+    {
+      "path": "tests/fixtures/pdn/small.json",
+      "bytes": 9259,
+      "sha256": "cb085b61d9f79c3928c574b834c3c4cbc7a0a479279cfb234b2ed0d9ad8c5f0d"
+    },
+    {
+      "path": "tests/fixtures/pdn/small.pdn",
+      "bytes": 9466,
+      "sha256": "e81220fe4e0400e1ab7e9f1765ecb759d937c41e5de8fc27a9d8ae4fd45810ff"
+    },
+    {
+      "path": "tests/fixtures/native-gaussian.json",
+      "bytes": 37078,
+      "sha256": "2076ec9671156ebb35bf43a20b614bb2a9c477b82bc3f161392e038f248d3cfc"
+    },
+    {
+      "path": "tests/fixtures/native-hatches.json",
+      "bytes": 214049,
+      "sha256": "af7902e82a5816175783861898f9c1371d3d7113874e7bcfabffcacfeb7d05f3"
+    },
+    {
+      "path": "tests/fixtures/native-redeye-analysis.json",
+      "bytes": 139666,
+      "sha256": "eccdc9b2e9e01a7a7bfdde842f37039eaa07d3ccf6e6b214c6c7e39260d47f2c"
+    },
+    {
+      "path": "tests/fixtures/native-redeye.json",
+      "bytes": 2425682,
+      "sha256": "1d872cbbd98b6e86c299f0deff8838f91e56c381d66f7bd082c66d6eed713f44"
+    },
+    {
+      "path": "tests/fixtures/native-temperature.json",
+      "bytes": 44995,
+      "sha256": "006ef4a3c01f6258d0ec15bc3e30ddf0834160828b1e4051bc8db84157aed892"
+    },
+    {
+      "path": "tests/fixtures/native-turbulence.json",
+      "bytes": 265653,
+      "sha256": "07ff723318e24d6dfc170c4d8650a04797bb063abce9bdec519bc07ef096d9ff"
+    }
+  ]
+}
