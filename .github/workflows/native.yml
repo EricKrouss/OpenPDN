@@ -140,8 +140,10 @@ jobs:
           cd artifacts
           shasum -a 256 -c *.zip.sha256
           ditto -x -k openpdn-0.1.0-dev-macos-universal2.zip extracted
-          binary=extracted/openpdn-0.1.0-dev-macos-universal2/OpenPDN.app/Contents/MacOS/openpdn
+          app=extracted/openpdn-0.1.0-dev-macos-universal2/OpenPDN.app
+          binary="$app/Contents/MacOS/openpdn"
           test -x "$binary"
           xcrun lipo "$binary" -verify_arch x86_64 arm64
+          codesign --verify --strict "$app"
           codesign --verify --strict "$binary"
           arch -${{ matrix.arch }} "$binary" --help

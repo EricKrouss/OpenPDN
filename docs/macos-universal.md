@@ -37,6 +37,14 @@ the merged architectures using both `lipo` and a Mach-O parser, then ad-hoc sign
 and verifies the final executable. An unsuccessful merge/signing operation does
 not replace an existing output. Input binaries are never modified.
 
+The packager then stages the completed `.app`, including its plist, in a
+temporary directory and ad-hoc signs the entire bundle. Its resource seal is
+included in the ZIP. Signing only the standalone executable is insufficient for
+strict verification after it is placed in an application bundle. `build.json`
+uses the packaged executable's hash after this signing step; it can differ from
+the standalone merged input's hash. Both the bundle and executable signatures
+are checked after ZIP extraction in CI.
+
 Third-party native dependencies are currently linked statically into each
 slice. **No third-party dylibs or frameworks are bundled.** The parser checks
 all slices' load commands, including weak/re-exported dependencies and rpaths.
@@ -54,9 +62,15 @@ executable hash and the absence of bundled libraries. The existing
 always true for a universal2 target, even when each input was built natively.
 It does not describe runtime testing. `native_platform_validation` remains false
 for universal2; a single architecture's `--validation-result` is rejected.
-The executable's ad-hoc signature supports local loading on Apple Silicon;
+The application's ad-hoc signature supports local loading on Apple Silicon;
 Developer ID application signing, Gatekeeper acceptance and notarization are
 separate distribution tasks and are not performed by this workflow.
+
+Universal2 packaging normally requires macOS so the completed bundle can be
+signed and verified with Apple tools. `--unsigned-macos` explicitly bypasses
+bundle signing for structural fixture tests on other hosts and records
+`macos_code_signing: unsigned-app-bundle`. Such archives are test outputs and
+are not distribution builds. Normal macOS packages record `ad-hoc-app-bundle`.
 
 ## CI checks and remaining runtime work
 

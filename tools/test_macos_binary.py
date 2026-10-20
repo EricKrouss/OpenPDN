@@ -183,6 +183,10 @@ class MergeTests(unittest.TestCase):
             subprocess.run([sys.executable, str(root / "tools/package-native.py"), "--target", "macos-universal2", "--binary", str(output)], check=True)
             artifacts = root / "artifacts"
             name = "openpdn-0.1.0-dev-macos-universal2"
+            archive = artifacts / (name + ".zip")
+            first = archive.read_bytes()
+            subprocess.run([sys.executable, str(root / "tools/package-native.py"), "--target", "macos-universal2", "--binary", str(output)], check=True)
+            self.assertEqual(archive.read_bytes(), first)
             subprocess.run(["shasum", "-a", "256", "-c", name + ".zip.sha256"], cwd=artifacts, check=True)
             extracted = root / "extracted"
             subprocess.run(["ditto", "-x", "-k", str(artifacts / (name + ".zip")), str(extracted)], check=True)
@@ -190,6 +194,7 @@ class MergeTests(unittest.TestCase):
             self.assertTrue(binary.stat().st_mode & 0o111)
             # Keep the same Apple command order as the final package smoke jobs.
             subprocess.run(["xcrun", "lipo", str(binary), "-verify_arch", "x86_64", "arm64"], check=True)
+            subprocess.run(["codesign", "--verify", "--strict", str(binary.parents[2])], check=True)
             subprocess.run(["codesign", "--verify", "--strict", str(binary)], check=True)
             subprocess.run(["arch", "-" + platform.machine(), str(binary), "--help"], check=True)
 

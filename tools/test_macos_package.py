@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import plistlib
+import runpy
 import shutil
 import struct
 import subprocess
@@ -10,6 +11,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 
 from test_macos_binary import fat, thin
@@ -31,7 +33,8 @@ class PackageTests(unittest.TestCase):
 
     def package(self, target="macos-universal2", format="zip", extra=(), success=True, default_binary=False):
         result = subprocess.run([sys.executable, str(self.root / "tools/package-native.py"), "--target", target, "--format", format,
-                                 *([] if default_binary else ["--binary", str(self.binary)]), *extra], capture_output=True, text=True)
+                                 *([] if default_binary else ["--binary", str(self.binary)]),
+                                 *(["--unsigned-macos"] if target == "macos-universal2" else []), *extra], capture_output=True, text=True)
         if not success:
             self.assertNotEqual(result.returncode, 0, result.stdout)
             self.assertFalse(list((self.root / "artifacts").glob("*.zip")))
@@ -53,6 +56,7 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(metadata["architectures"], ["arm64", "x86_64"])
             self.assertEqual(metadata["minimum_macos"], "11.0")
             self.assertEqual(metadata["bundled_native_libraries"], [])
+            self.assertEqual(metadata["macos_code_signing"], "unsigned-app-bundle")
             self.assertFalse(metadata["native_platform_validation"])
             self.assertFalse(metadata["feature_complete"])
             self.assertEqual(metadata["binary_sha256"], hashlib.sha256(self.binary.read_bytes()).hexdigest())
@@ -102,6 +106,27 @@ class PackageTests(unittest.TestCase):
 
     def test_reject_single_native_validation_record_for_universal_binary(self):
         self.assertIn("separate runtime evidence", self.package(extra=("--validation-result", str(self.root / "unused.json")), success=False))
+
+    def test_signing_records_packaged_binary_hash_and_resource_seal(self):
+        binary_path = "OpenPDN.app/Contents/MacOS/openpdn"
+        signed_binary = self.binary.read_bytes() + b"simulated signature bytes"
+
+        def simulated_sign(contents, path):
+            self.assertEqual(path, binary_path)
+            return {binary_path: signed_binary, "OpenPDN.app/Contents/_CodeSignature/CodeResources": b"simulated seal"}
+
+        script = self.root / "tools/package-native.py"
+        with mock.patch("macos_binary.adhoc_sign_app", side_effect=simulated_sign), mock.patch.object(sys, "argv", [str(script), "--target", "macos-universal2", "--binary", str(self.binary)]):
+            runpy.run_path(str(script), run_name="__main__")
+        archive = self.root / "artifacts/openpdn-0.1.0-dev-macos-universal2.zip"
+        with zipfile.ZipFile(archive) as source:
+            prefix = archive.stem + "/"
+            metadata = json.loads(source.read(prefix + "build.json"))
+            self.assertEqual(source.read(prefix + binary_path), signed_binary)
+            self.assertEqual(metadata["binary_sha256"], hashlib.sha256(signed_binary).hexdigest())
+            self.assertEqual(metadata["macos_code_signing"], "ad-hoc-app-bundle")
+            self.assertEqual(source.read(prefix + "OpenPDN.app/Contents/_CodeSignature/CodeResources"), b"simulated seal")
+        self.assertNotEqual(self.binary.read_bytes(), signed_binary)
 
     def test_source_validation_zip_includes_packaging_dependencies(self):
         for folder in ("src", "tests", "examples"):

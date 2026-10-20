@@ -4,6 +4,10 @@ OpenPDN links third-party native code statically. Only Apple system dylibs and
 frameworks may be loaded; fail closed if a dependency starts requiring bundling.
 """
 import struct
+import platform
+import subprocess
+import tempfile
+from pathlib import Path
 from pathlib import PurePosixPath
 
 MINIMUM_MACOS = "11.0"
@@ -141,3 +145,22 @@ def validate_macos_binary(data, architectures, minimum_macos=MINIMUM_MACOS):
             if not system_library(path):
                 raise ValueError(f"{architecture}: non-system dependency/rpath {path!r}; bundling native libraries is not supported")
     return slices
+
+
+def adhoc_sign_app(contents, binary_path):
+    """Seal the completed .app in temporary storage; preserve the input binary."""
+    if platform.system() != "Darwin":
+        raise ValueError("Universal2 app signing requires macOS; --unsigned-macos is only for structural tests")
+    with tempfile.TemporaryDirectory(prefix="openpdn-app-sign-") as temporary:
+        stage = Path(temporary)
+        for name, data in contents.items():
+            if name.startswith("OpenPDN.app/"):
+                path = stage / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+                path.chmod(0o755 if name == binary_path else 0o644)
+        app = stage / "OpenPDN.app"
+        subprocess.run(["codesign", "--force", "--sign", "-", "--identifier", "dev.openpdn.editor", "--timestamp=none", str(app)], check=True)
+        subprocess.run(["codesign", "--verify", "--strict", str(app)], check=True)
+        return {path.relative_to(stage).as_posix(): path.read_bytes()
+                for path in app.rglob("*") if path.is_file()}

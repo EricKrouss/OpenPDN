@@ -17,7 +17,7 @@ import subprocess
 import tarfile
 import zipfile
 from pathlib import Path
-from macos_binary import MINIMUM_MACOS, UNIVERSAL_ARCHITECTURES, validate_macos_binary
+from macos_binary import MINIMUM_MACOS, UNIVERSAL_ARCHITECTURES, adhoc_sign_app, validate_macos_binary
 
 root=Path(__file__).resolve().parent.parent
 host_arch={"AMD64":"x86_64","aarch64":"arm64"}.get(platform.machine(),platform.machine())
@@ -28,11 +28,14 @@ parser.add_argument("--target",choices=list(target_hosts),default=host_target)
 parser.add_argument("--binary",type=Path)
 parser.add_argument("--format",choices=("zip","tar.gz"),default="zip",help="Archive format (ZIP preserves executable permissions on Linux and macOS)")
 parser.add_argument("--validation-result",type=Path,help="Successful native validation evidence for this exact binary")
+parser.add_argument("--unsigned-macos",action="store_true",help="Skip universal2 app signing for structural tests; never a distribution build")
 args=parser.parse_args()
 assert args.target,"Specify the built target explicitly"
 windows=args.target.startswith("windows")
 macos=args.target.startswith("macos")
 universal=args.target=="macos-universal2"
+if args.unsigned_macos and not universal:
+    parser.error("--unsigned-macos only applies to macos-universal2")
 cross_compiled=target_hosts[args.target]!=(platform.system(),host_arch)
 target_triples={"linux-x86_64":"x86_64-unknown-linux-gnu","windows-x86_64":"x86_64-pc-windows-gnu","macos-arm64":"aarch64-apple-darwin","macos-x86_64":"x86_64-apple-darwin","macos-universal2":"universal2-apple-darwin"}
 binary=args.binary or root / "target" / (target_triples[args.target] if cross_compiled else "") / "release" / ("openpdn.exe" if windows else "openpdn")
@@ -103,6 +106,12 @@ if macos:
     for path,data in contents.items():
         if path!=binary_path and data[:4] in (b"\xcf\xfa\xed\xfe",b"\xfe\xed\xfa\xcf",b"\xce\xfa\xed\xfe",b"\xfe\xed\xfa\xce",b"\xca\xfe\xba\xbe",b"\xbe\xba\xfe\xca",b"\xca\xfe\xba\xbf",b"\xbf\xba\xfe\xca"):
             raise ValueError(f"Unexpected bundled native payload: {path}; native library bundling is not supported")
+    if universal:
+        metadata["macos_code_signing"]="unsigned-app-bundle" if args.unsigned_macos else "ad-hoc-app-bundle"
+        if not args.unsigned_macos:
+            contents.update(adhoc_sign_app(contents,binary_path))
+            metadata["binary_sha256"]=hashlib.sha256(contents[binary_path]).hexdigest()
+            metadata["macos_slices"]=validate_macos_binary(contents[binary_path],UNIVERSAL_ARCHITECTURES)
 contents["build.json"]=(json.dumps(metadata,indent=2)+"\n").encode()
 for path,data in contents.items():
     output=folder/path;output.parent.mkdir(parents=True,exist_ok=True);output.write_bytes(data)
