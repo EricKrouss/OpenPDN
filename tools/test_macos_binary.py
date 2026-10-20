@@ -2,8 +2,10 @@
 import importlib.util
 from pathlib import Path
 import platform
+import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -162,7 +164,7 @@ class MergeTests(unittest.TestCase):
             self.assertEqual(sorted(path.name for path in root.iterdir()), ["arm", "out", "x86"])
 
     @unittest.skipUnless(platform.system() == "Darwin", "requires real macOS lipo, clang and codesign")
-    def test_real_apple_tools_merge_and_native_cli_execution(self):
+    def test_real_apple_tools_merge_package_and_native_cli_execution(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "main.c"
@@ -172,7 +174,24 @@ class MergeTests(unittest.TestCase):
             output = root / "universal"
             merge_macos.merge(root / "x86_64", root / "arm64", output)
             validate_macos_binary(output.read_bytes(), UNIVERSAL_ARCHITECTURES)
-            subprocess.run([str(output)], check=True)
+            (root / "tools").mkdir()
+            (root / "docs").mkdir()
+            for name in ("package-native.py", "macos_binary.py"):
+                shutil.copyfile(Path(__file__).with_name(name), root / "tools" / name)
+            for name in ("README.md", "Cargo.lock"):
+                (root / name).write_text("Apple-tools integration fixture\n")
+            subprocess.run([sys.executable, str(root / "tools/package-native.py"), "--target", "macos-universal2", "--binary", str(output)], check=True)
+            artifacts = root / "artifacts"
+            name = "openpdn-0.1.0-dev-macos-universal2"
+            subprocess.run(["shasum", "-a", "256", "-c", name + ".zip.sha256"], cwd=artifacts, check=True)
+            extracted = root / "extracted"
+            subprocess.run(["ditto", "-x", "-k", str(artifacts / (name + ".zip")), str(extracted)], check=True)
+            binary = extracted / name / "OpenPDN.app/Contents/MacOS/openpdn"
+            self.assertTrue(binary.stat().st_mode & 0o111)
+            # Keep the same Apple command order as the final package smoke jobs.
+            subprocess.run(["xcrun", "lipo", str(binary), "-verify_arch", "x86_64", "arm64"], check=True)
+            subprocess.run(["codesign", "--verify", "--strict", str(binary)], check=True)
+            subprocess.run(["arch", "-" + platform.machine(), str(binary), "--help"], check=True)
 
 
 if __name__ == "__main__":

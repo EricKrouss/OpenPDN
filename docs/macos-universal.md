@@ -100,8 +100,9 @@ archive paths/plists/metadata, permissions, checksums and determinism:
 python3 -m unittest discover -s tools -p 'test_macos_*.py' -v
 ```
 
-One additional test runs real Apple clang/lipo/codesign and executes the merged
-C fixture only on macOS. Linux fixture tests cannot establish that Apple tools
+One additional test runs real Apple clang/lipo/codesign, packages and extracts
+the C fixture with `ditto`, verifies its signature and executes its native slice
+only on macOS. Linux fixture tests cannot establish that Apple tools
 will accept an OpenPDN build or that either application slice will run.
 
 The workflow has read-only repository permissions and uploads CI artifacts only.

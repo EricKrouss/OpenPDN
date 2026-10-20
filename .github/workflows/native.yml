@@ -142,6 +142,6 @@ jobs:
           ditto -x -k openpdn-0.1.0-dev-macos-universal2.zip extracted
           binary=extracted/openpdn-0.1.0-dev-macos-universal2/OpenPDN.app/Contents/MacOS/openpdn
           test -x "$binary"
-          xcrun lipo -verify_arch x86_64 arm64 "$binary"
+          xcrun lipo "$binary" -verify_arch x86_64 arm64
           codesign --verify --strict "$binary"
           arch -${{ matrix.arch }} "$binary" --help
