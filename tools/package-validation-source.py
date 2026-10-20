@@ -11,7 +11,7 @@ if (root / "LICENSE").is_file():
     files.append(root / "LICENSE")
 for folder in ("src", "tests", "examples", "docs"):
     files += [p for p in sorted((root / folder).rglob("*")) if p.is_file() and "__pycache__" not in p.parts]
-contents = {str(p.relative_to(root)): p.read_bytes() for p in files}
+contents = {p.relative_to(root).as_posix(): p.read_bytes() for p in files}
 assert not any(name.endswith((".dll", ".pdb", ".exe", ".so", ".cs")) for name in contents)
 manifest = {"purpose": "Native Metal validation source", "feature_complete": False,
             "files": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(contents.items())}}

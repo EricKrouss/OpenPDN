@@ -114,6 +114,7 @@ class PackageTests(unittest.TestCase):
         with zipfile.ZipFile(self.root / "artifacts/openpdn-metal-validation-source.zip") as source:
             prefix = "openpdn-metal-validation/"
             manifest = json.loads(source.read(prefix + "source-manifest.json"))
+            self.assertTrue(all("\\" not in name for name in manifest["files"]))
             for name in ("tools/macos_binary.py", "tools/package-native.py", "tools/merge-macos-universal.py", "tools/test_macos_binary.py", "tools/test_macos_package.py"):
                 self.assertEqual(source.read(prefix + name), (self.root / name).read_bytes())
             for name, digest in manifest["files"].items():
