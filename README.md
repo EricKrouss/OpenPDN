@@ -3,9 +3,11 @@ OpenPDN is a native Rust image editor reverse engineered from **Paint.NET 5.1.12
 
 The executable is `openpdn` (`openpdn.exe` on Windows), and the macOS application bundle is `OpenPDN.app`. Existing project files, preferences and named palettes remain compatible.
 
-Development bundles are ZIP archives for Linux x86_64, Windows x86_64 and macOS Apple Silicon. Extract the archive and run `openpdn`, `openpdn.exe`, or `OpenPDN.app` for your platform. Linux and macOS ZIP entries preserve executable permissions.
+Development bundles are ZIP archives for Linux x86_64, Windows x86_64 and macOS. The macOS CI pipeline produces a universal2 ZIP containing both Intel x86_64 and Apple Silicon arm64 code in one `OpenPDN.app`, with a macOS 11.0 deployment target and a Metal-capable GPU requirement. Extract the archive and run `openpdn`, `openpdn.exe`, or `OpenPDN.app` for your platform. Linux and macOS ZIP entries preserve executable permissions. See [macOS universal builds and validation limits](docs/macos-universal.md).
 
 Download the builds and SHA-256 checksums from [GitHub Releases](https://github.com/EricKrouss/OpenPDN/releases).
+
+Release `0.1.0` predates the universal2 pipeline and contains an ARM64-only macOS ZIP. A universal2 CI artifact is not automatically published as a release.
 
 The runtime uses Rust, egui/winit, and wgpu. Layer composition, gradients and pixel processing for all thirteen adjustments and forty effects run as GPU compute shaders; the UI and canvas use the same device. Linux uses Vulkan, Windows uses Direct3D 12, and macOS uses Metal through wgpu. Hover over the tool name in the status bar to identify the actual selected adapter; startup also logs it. Software adapters are possible and do not count as hardware validation.
 
@@ -56,6 +58,7 @@ physical tablet input still need native certification. See [brush evidence](docs
 
 ```sh
 cargo fmt --all --check
+python3 -m unittest discover -s tools -p 'test_macos_*.py' -v
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 cargo test --locked --test gpu -- --ignored --nocapture

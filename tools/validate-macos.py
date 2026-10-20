@@ -27,6 +27,7 @@ output.mkdir(parents=True)
 env = os.environ.copy()
 env["WGPU_BACKEND"] = "metal"
 env.setdefault("CARGO_BUILD_JOBS", "2")
+env.setdefault("MACOSX_DEPLOYMENT_TARGET", "11.0")
 # Isolate smoke-run preferences from the user's normal editor workspace.
 env["XDG_CONFIG_HOME"] = str(output / "config")
 env["XDG_DATA_HOME"] = str(output / "data")

@@ -833,10 +833,7 @@ impl Gpu {
         rx.recv_timeout(Duration::from_secs(10))
             .context("GPU readback timed out")??;
         let bytes = staging.get_mapped_range(..)?;
-        let out = bytes
-            .chunks_exact(4)
-            .map(|p| [p[0], p[1], p[2], p[3]])
-            .collect();
+        let out = bytes.as_chunks::<4>().0.to_vec();
         drop(bytes);
         staging.unmap();
         Ok(out)

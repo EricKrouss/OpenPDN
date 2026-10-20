@@ -3,6 +3,13 @@
 The requested completion target still includes full tool, effect and UI parity.
 Passing backend checks establishes the exercised paths, not the entire product.
 
+The [universal2 pipeline](macos-universal.md) adds Intel and Apple Silicon slices
+to one executable. Historical Apple M2 Pro evidence below covers the recorded
+ARM64 binary hashes only. It does not certify a newly merged universal binary,
+Intel execution or the macOS 11.0 deployment baseline. Universal2 CI separately
+checks native CPU/reference tests and final ZIP CLI startup on both architectures;
+Metal and interactive validation still require actual hardware runs.
+
 ## OpenPDN ZIP validation, 2026-10-18
 
 The renamed OpenPDN build passes 88 standard tests and all 14 explicit Metal

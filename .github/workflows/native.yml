@@ -2,22 +2,28 @@ name: Native Rust builds
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+env:
+  CARGO_BUILD_JOBS: '2'
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Linux native dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
       - run: cargo fmt --all --check
+      - run: python -m unittest discover -s tools -p 'test_macos_*.py' -v
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
       - run: cargo build --locked --release
@@ -34,3 +40,105 @@ jobs:
             artifacts/*.zip
             artifacts/*.sha256
           if-no-files-found: error
+
+  macos-slice:
+    name: macOS ${{ matrix.arch }} slice
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x86_64
+            target: x86_64-apple-darwin
+          - os: macos-15
+            arch: arm64
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Confirm native runner architecture
+        run: test "$(uname -m)" = '${{ matrix.arch }}'
+      - run: cargo fmt --all --check
+      - run: python -m unittest discover -s tools -p 'test_macos_*.py' -v
+      - run: cargo clippy --locked --all-targets --target ${{ matrix.target }} -- -D warnings
+      - run: cargo test --locked --target ${{ matrix.target }}
+      - run: cargo build --locked --release --target ${{ matrix.target }} --bin openpdn
+      - name: Stage and inspect native slice
+        run: |
+          mkdir -p artifacts/slices/${{ matrix.arch }}
+          cp target/${{ matrix.target }}/release/openpdn artifacts/slices/${{ matrix.arch }}/openpdn
+          python tools/package-native.py --target macos-${{ matrix.arch }} --binary artifacts/slices/${{ matrix.arch }}/openpdn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openpdn-macos-slice-${{ matrix.arch }}
+          path: artifacts/slices/${{ matrix.arch }}/openpdn
+          if-no-files-found: error
+
+  macos-universal:
+    needs: macos-slice
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: openpdn-macos-slice-x86_64
+          path: artifacts/slices/x86_64
+      - uses: actions/download-artifact@v4
+        with:
+          name: openpdn-macos-slice-arm64
+          path: artifacts/slices/arm64
+      - name: Merge, verify and ad-hoc sign both slices
+        run: |
+          python tools/merge-macos-universal.py --x86_64 artifacts/slices/x86_64/openpdn --arm64 artifacts/slices/arm64/openpdn
+          xcrun vtool -show-build target/universal2-apple-darwin/release/openpdn
+          xcrun otool -arch all -L target/universal2-apple-darwin/release/openpdn
+      - name: Package universal2 application
+        run: python tools/package-native.py --target macos-universal2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openpdn-macos-universal2
+          path: |
+            artifacts/*-macos-universal2.zip
+            artifacts/*-macos-universal2.zip.sha256
+          if-no-files-found: error
+
+  macos-package-smoke:
+    name: macOS ${{ matrix.arch }} packaged CLI startup
+    needs: macos-universal
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: openpdn-macos-universal2
+          path: artifacts
+      - name: Verify and run the extracted universal executable natively
+        run: |
+          test "$(uname -m)" = '${{ matrix.arch }}'
+          cd artifacts
+          shasum -a 256 -c *.zip.sha256
+          ditto -x -k openpdn-0.1.0-dev-macos-universal2.zip extracted
+          binary=extracted/openpdn-0.1.0-dev-macos-universal2/OpenPDN.app/Contents/MacOS/openpdn
+          test -x "$binary"
+          xcrun lipo -verify_arch x86_64 arm64 "$binary"
+          codesign --verify --strict "$binary"
+          arch -${{ matrix.arch }} "$binary" --help

@@ -6,7 +6,7 @@ import json
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
-files = [root / name for name in ("Cargo.toml", "Cargo.lock", "README.md", "tools/validate-macos.py", "tools/test-validation-timestamps.py", "tools/test-validation-report.py", "tools/package-native.py")]
+files = [root / name for name in ("Cargo.toml", "Cargo.lock", "README.md", "tools/validate-macos.py", "tools/test-validation-timestamps.py", "tools/test-validation-report.py", "tools/package-native.py", "tools/macos_binary.py", "tools/merge-macos-universal.py", "tools/test_macos_binary.py", "tools/test_macos_package.py")]
 if (root / "LICENSE").is_file():
     files.append(root / "LICENSE")
 for folder in ("src", "tests", "examples", "docs"):

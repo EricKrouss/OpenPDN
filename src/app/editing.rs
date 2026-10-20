@@ -222,11 +222,7 @@ impl PaintApp {
         let width = native.width as u32;
         let height = native.height as u32;
         crate::document::pixel_count(width, height)?;
-        let pixels = native
-            .bytes
-            .chunks_exact(4)
-            .map(|v| [v[0], v[1], v[2], v[3]])
-            .collect();
+        let pixels = native.bytes.as_chunks::<4>().0.to_vec();
         let mut image = ClipboardImage {
             width,
             height,

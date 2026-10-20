@@ -17,10 +17,11 @@ import subprocess
 import tarfile
 import zipfile
 from pathlib import Path
+from macos_binary import MINIMUM_MACOS, UNIVERSAL_ARCHITECTURES, validate_macos_binary
 
 root=Path(__file__).resolve().parent.parent
 host_arch={"AMD64":"x86_64","aarch64":"arm64"}.get(platform.machine(),platform.machine())
-target_hosts={"linux-x86_64":("Linux","x86_64"),"windows-x86_64":("Windows","x86_64"),"macos-arm64":("Darwin","arm64"),"macos-x86_64":("Darwin","x86_64")}
+target_hosts={"linux-x86_64":("Linux","x86_64"),"windows-x86_64":("Windows","x86_64"),"macos-arm64":("Darwin","arm64"),"macos-x86_64":("Darwin","x86_64"),"macos-universal2":("Darwin","universal2")}
 host_target=next((name for name,host in target_hosts.items() if host==(platform.system(),host_arch)),None)
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--target",choices=list(target_hosts),default=host_target)
@@ -31,8 +32,9 @@ args=parser.parse_args()
 assert args.target,"Specify the built target explicitly"
 windows=args.target.startswith("windows")
 macos=args.target.startswith("macos")
+universal=args.target=="macos-universal2"
 cross_compiled=target_hosts[args.target]!=(platform.system(),host_arch)
-target_triples={"linux-x86_64":"x86_64-unknown-linux-gnu","windows-x86_64":"x86_64-pc-windows-gnu","macos-arm64":"aarch64-apple-darwin","macos-x86_64":"x86_64-apple-darwin"}
+target_triples={"linux-x86_64":"x86_64-unknown-linux-gnu","windows-x86_64":"x86_64-pc-windows-gnu","macos-arm64":"aarch64-apple-darwin","macos-x86_64":"x86_64-apple-darwin","macos-universal2":"universal2-apple-darwin"}
 binary=args.binary or root / "target" / (target_triples[args.target] if cross_compiled else "") / "release" / ("openpdn.exe" if windows else "openpdn")
 assert binary.is_file(),f"Build the selected target first: {binary}"
 header=binary.read_bytes()[:4096]
@@ -43,8 +45,8 @@ if windows:
 elif args.target.startswith("linux"):
     assert header[:6]==b"\x7fELF\x02\x01" and int.from_bytes(header[18:20],"little")==62, "The selected Linux binary is not x86_64 ELF"
 else:
-    cpu=0x100000C if args.target=="macos-arm64" else 0x1000007
-    assert header[:4]==b"\xcf\xfa\xed\xfe" and int.from_bytes(header[4:8],"little")==cpu, "The selected macOS binary has the wrong Mach-O architecture"
+    architectures=UNIVERSAL_ARCHITECTURES if universal else {args.target.removeprefix("macos-")}
+    macos_slices=validate_macos_binary(binary.read_bytes(),architectures)
 name="openpdn-0.1.0-dev-"+args.target
 folder=root / "artifacts" / name
 folder.mkdir(parents=True,exist_ok=True)
@@ -62,12 +64,18 @@ metadata={"build":"0.1.0-dev","feature_complete":False,"target":args.target,
           "native_platform_validation":args.target=="linux-x86_64" and platform.system()=="Linux",
           "validation":"See docs/status.md for the exact tested platform and feature boundaries",
           "limits":"See docs/status.md","dotnet_runtime_required":False}
+if macos:
+    metadata.update({"architectures":sorted(macos_slices),"minimum_macos":MINIMUM_MACOS,
+                     "macos_slices":macos_slices,"bundled_native_libraries":[],
+                     "native_platform_validation":False})
 if args.target=="linux-x86_64" and platform.system()=="Linux" and shutil.which("objdump"):
     symbols=subprocess.check_output(["objdump","-T",str(binary)],text=True)
     versions={tuple(map(int,v.split("."))) for v in re.findall(r"GLIBC_(\d+\.\d+)",symbols)}
     metadata["max_glibc_symbol_version"]=".".join(map(str,max(versions))) if versions else None
 contents={path:source.read_bytes() for path,source in entries.items()}
 if args.validation_result:
+    if universal:
+        raise ValueError("Universal2 needs separate runtime evidence for both slices; a single validation result cannot certify it")
     evidence=args.validation_result.read_bytes()
     result=json.loads(evidence)
     assert result.get("success") is True and result.get("binary_sha256")==metadata["binary_sha256"], "Validation must pass for this exact binary"
@@ -84,10 +92,17 @@ if macos:
         "CFBundleIdentifier":"dev.openpdn.editor","CFBundlePackageType":"APPL",
         "CFBundleExecutable":"openpdn","CFBundleShortVersionString":"0.1.0",
         "CFBundleVersion":"1","NSHighResolutionCapable":True,
+        "LSMinimumSystemVersion":MINIMUM_MACOS,
+        "LSMinimumSystemVersionByArchitecture":{arch:MINIMUM_MACOS for arch in macos_slices},
         "LSApplicationCategoryType":"public.app-category.graphics-design",
         "NSHumanReadableCopyright":"OpenPDN development build. See bundled documentation and font notices.",
     },sort_keys=True)
     contents["OpenPDN.app/Contents/PkgInfo"]=b"APPL????"
+    # The allowlist ships one native executable and no third-party libraries.
+    # Do not let a newly added documentation payload bypass native validation.
+    for path,data in contents.items():
+        if path!=binary_path and data[:4] in (b"\xcf\xfa\xed\xfe",b"\xfe\xed\xfa\xcf",b"\xce\xfa\xed\xfe",b"\xfe\xed\xfa\xce",b"\xca\xfe\xba\xbe",b"\xbe\xba\xfe\xca",b"\xca\xfe\xba\xbf",b"\xbf\xba\xfe\xca"):
+            raise ValueError(f"Unexpected bundled native payload: {path}; native library bundling is not supported")
 contents["build.json"]=(json.dumps(metadata,indent=2)+"\n").encode()
 for path,data in contents.items():
     output=folder/path;output.parent.mkdir(parents=True,exist_ok=True);output.write_bytes(data)

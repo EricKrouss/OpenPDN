@@ -211,7 +211,7 @@ impl Document {
                     }
                 }
                 intersections.sort_by(f64::total_cmp);
-                for pair in intersections.chunks_exact(2) {
+                for pair in intersections.as_chunks::<2>().0 {
                     let x0 = (pair[0] - 0.5).ceil().clamp(0., self.width as f64) as usize;
                     let x1 = (pair[1] - 0.5).ceil().clamp(0., self.width as f64) as usize;
                     mask[y as usize * self.width as usize + x0
