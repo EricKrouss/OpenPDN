@@ -332,12 +332,14 @@ fn decode_file(bytes: &[u8]) -> String {
     {
         let little = bytes[0] == 255;
         let units: Vec<_> = data
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|v| {
                 if little {
-                    u16::from_le_bytes([v[0], v[1]])
+                    u16::from_le_bytes(*v)
                 } else {
-                    u16::from_be_bytes([v[0], v[1]])
+                    u16::from_be_bytes(*v)
                 }
             })
             .collect();

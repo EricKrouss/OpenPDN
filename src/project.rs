@@ -135,11 +135,7 @@ pub fn read_project(input: impl Read + std::io::Seek) -> Result<Document> {
             blend_mode: info.blend_mode,
             metadata: info.metadata,
             is_background: info.is_background,
-            pixels: Arc::new(
-                data.chunks_exact(4)
-                    .map(|p| [p[0], p[1], p[2], p[3]])
-                    .collect(),
-            ),
+            pixels: Arc::new(data.as_chunks::<4>().0.to_vec()),
         });
     }
     let document = Document {

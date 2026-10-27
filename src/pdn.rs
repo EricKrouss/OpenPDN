@@ -330,7 +330,9 @@ pub fn read(input: impl Read) -> Result<Document> {
         for row in data[..required].chunks_exact(stride) {
             pixels.extend(
                 row[..width as usize * 4]
-                    .chunks_exact(4)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
                     .map(|p| [p[2], p[1], p[0], p[3]]),
             );
         }
