@@ -7,7 +7,7 @@ Development bundles are ZIP archives for Linux x86_64, Windows x86_64 and macOS.
 
 Download the builds and SHA-256 checksums from [GitHub Releases](https://github.com/EricKrouss/OpenPDN/releases).
 
-Release `0.1.0` predates the universal2 pipeline and contains an ARM64-only macOS ZIP. A universal2 CI artifact is not automatically published as a release.
+Release `0.1.1` includes a universal2 macOS ZIP for Intel and Apple Silicon. Release `0.1.0` contains an ARM64-only macOS ZIP.
 
 The runtime uses Rust, egui/winit, and wgpu. Layer composition, gradients and pixel processing for all thirteen adjustments and forty effects run as GPU compute shaders; the UI and canvas use the same device. Linux uses Vulkan, Windows uses Direct3D 12, and macOS uses Metal through wgpu. Hover over the tool name in the status bar to identify the actual selected adapter; startup also logs it. Software adapters are possible and do not count as hardware validation.
 
@@ -49,6 +49,10 @@ Save projects as `.pdn` to preserve layers in Paint.NET's actual format. Bidirec
 
 The tool grid, workspace controls, adjustments and effect menus use 121 hand-crafted vector icons, including Magic Wand, separate pixel/selection moves, clipboard commands and drag-and-drop. No image generation or copied Paint.NET artwork is used. Export the exact artwork with `cargo run --locked --example icon_atlas -- artifacts/icons.svg`.
 
+## Appearance and zoom
+
+Use **View → Dark mode** to change the editor theme. OpenPDN remembers the setting when you restart. Hold **Ctrl** and scroll over the canvas to zoom around the pointer. **Ctrl+Plus** (or **Ctrl+=**) and **Ctrl+Minus** adjust the zoom, **Ctrl+0** restores actual size, and **Ctrl+B** fits the image to the window up to 100%. On macOS, use **Command** for the keyboard shortcuts. Both **Control** and **Command** work with the mouse wheel.
+
 ## Verify
 
 Brush, Eraser, Clone Stamp and Recolor now include circle/square tips, hardness, spacing, antialiasing,
@@ -81,6 +85,8 @@ An isolated Linux UI exercise requires Xvfb, python-xlib and Pillow:
 ```sh
 xvfb-run -a -s '-screen 0 1280x900x24' env WAYLAND_DISPLAY= OPENPDN_ISOLATED_UI=1 python3 tools/ui-smoke.py
 ```
+
+Set `OPENPDN_UI_SCOPE=appearance-zoom` to run the theme and zoom checks.
 
 For native window dragging, use a private KWin session on the isolated desktop
 (requires `kwin_x11` and `dbus-run-session`):

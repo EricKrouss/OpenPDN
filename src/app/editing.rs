@@ -494,7 +494,7 @@ impl PaintApp {
             let valid = crate::document::pixel_count(width, height).is_ok();
             if !valid {
                 ui.colored_label(
-                    egui::Color32::DARK_RED,
+                    ui.visuals().error_fg_color,
                     "Image exceeds the supported pixel count.",
                 );
             }

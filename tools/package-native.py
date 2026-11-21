@@ -15,11 +15,14 @@ import re
 import shutil
 import subprocess
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 from macos_binary import MINIMUM_MACOS, UNIVERSAL_ARCHITECTURES, adhoc_sign_app, validate_macos_binary
 
 root=Path(__file__).resolve().parent.parent
+version=tomllib.loads((root/"Cargo.toml").read_text())["package"]["version"]
+build=version+"-dev"
 host_arch={"AMD64":"x86_64","aarch64":"arm64"}.get(platform.machine(),platform.machine())
 target_hosts={"linux-x86_64":("Linux","x86_64"),"windows-x86_64":("Windows","x86_64"),"macos-arm64":("Darwin","arm64"),"macos-x86_64":("Darwin","x86_64"),"macos-universal2":("Darwin","universal2")}
 host_target=next((name for name,host in target_hosts.items() if host==(platform.system(),host_arch)),None)
@@ -50,7 +53,7 @@ elif args.target.startswith("linux"):
 else:
     architectures=UNIVERSAL_ARCHITECTURES if universal else {args.target.removeprefix("macos-")}
     macos_slices=validate_macos_binary(binary.read_bytes(),architectures)
-name="openpdn-0.1.0-dev-"+args.target
+name="openpdn-"+build+"-"+args.target
 folder=root / "artifacts" / name
 folder.mkdir(parents=True,exist_ok=True)
 # Archive only the explicit allowlist below, never source or reference payloads.
@@ -59,7 +62,7 @@ entries={binary_path:binary,"README.md":root/"README.md","Cargo.lock":root/"Carg
 if (root/"LICENSE").is_file():entries["LICENSE"]=root/"LICENSE"
 entries.update({"docs/"+p.name:p for p in (root/"docs").iterdir() if p.is_file()})
 if (root/"artifacts/icons.svg").is_file():entries["docs/icons.svg"]=root/"artifacts/icons.svg"
-metadata={"build":"0.1.0-dev","feature_complete":False,"target":args.target,
+metadata={"build":build,"feature_complete":False,"target":args.target,
           "binary_path":binary_path,
           "binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),
           "cross_compiled":cross_compiled,
@@ -93,8 +96,8 @@ if macos:
     contents["OpenPDN.app/Contents/Info.plist"]=plistlib.dumps({
         "CFBundleName":"OpenPDN","CFBundleDisplayName":"OpenPDN",
         "CFBundleIdentifier":"dev.openpdn.editor","CFBundlePackageType":"APPL",
-        "CFBundleExecutable":"openpdn","CFBundleShortVersionString":"0.1.0",
-        "CFBundleVersion":"1","NSHighResolutionCapable":True,
+        "CFBundleExecutable":"openpdn","CFBundleShortVersionString":version,
+        "CFBundleVersion":version,"NSHighResolutionCapable":True,
         "LSMinimumSystemVersion":MINIMUM_MACOS,
         "LSMinimumSystemVersionByArchitecture":{arch:MINIMUM_MACOS for arch in macos_slices},
         "LSApplicationCategoryType":"public.app-category.graphics-design",

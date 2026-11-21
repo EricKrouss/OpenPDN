@@ -1220,14 +1220,19 @@ fn triangulate(points: &[Pos2]) -> Vec<u32> {
 pub fn paint(painter: &egui::Painter, rect: Rect, icon: Icon, enabled: bool) {
     let scale = rect.size() / 24.;
     let map = |p: [f32; 2]| Pos2::new(rect.left() + p[0] * scale.x, rect.top() + p[1] * scale.y);
-    let ink = |c: Ink| {
-        if enabled {
-            c.rgb()
-        } else {
-            let c = c.rgb();
-            Color32::from_gray(
-                ((u32::from(c.r()) + u32::from(c.g()) + u32::from(c.b())) / 6 + 115) as u8,
-            )
+    let dark_mode = painter.ctx().theme() == egui::Theme::Dark;
+    let ink = |ink: Ink| match (enabled, dark_mode, ink) {
+        (true, true, Ink::Dark) => Color32::from_rgb(181, 192, 203),
+        (true, true, Ink::Blue) => Color32::from_rgb(82, 159, 220),
+        (true, _, ink) => ink.rgb(),
+        (false, _, ink) => {
+            let [r, g, b, _] = ink.rgb().to_array();
+            let sum = u16::from(r) + u16::from(g) + u16::from(b);
+            Color32::from_gray(if dark_mode {
+                70 + (sum / 12) as u8
+            } else {
+                115 + (sum / 6) as u8
+            })
         }
     };
     for m in artwork(icon).0 {

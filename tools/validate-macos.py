@@ -11,8 +11,10 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tomllib
 
 root = Path(__file__).resolve().parent.parent
+version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--skip-ui", action="store_true", help="Record a headless run without claiming window/presentation validation")
 args = parser.parse_args()
@@ -121,7 +123,7 @@ try:
     run("package", [sys.executable, root / "tools/package-native.py"])
     if not args.skip_ui:
         target = "macos-arm64" if platform.machine() == "arm64" else "macos-x86_64"
-        package_name = "openpdn-0.1.0-dev-" + target
+        package_name = "openpdn-" + version + "-dev-" + target
         extracted = output / "zip-extracted"
         run("zip-extraction", ["ditto", "-xk", root / "artifacts" / (package_name + ".zip"), extracted])
         app = extracted / package_name / "OpenPDN.app"

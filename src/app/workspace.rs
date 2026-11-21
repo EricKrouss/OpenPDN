@@ -18,9 +18,11 @@ pub(super) struct Workspace {
     restore: Option<[bool; 4]>,
     pub grid: bool,
     pub rulers: bool,
+    pub dark_mode: bool,
     pub(super) more_colors: bool,
     pub(super) secondary_selected: bool,
     pub canvas: Option<Rect>,
+    pub fit_to_window: bool,
     pub cursor: Option<(i32, i32)>,
 }
 impl Default for Workspace {
@@ -39,9 +41,11 @@ impl Default for Workspace {
             restore: None,
             grid: false,
             rulers: false,
+            dark_mode: false,
             more_colors: false,
             secondary_selected: false,
             canvas: None,
+            fit_to_window: false,
             cursor: None,
         }
     }
@@ -55,17 +59,12 @@ pub(super) struct LayerProperties {
 }
 
 pub(super) fn configure_style(ctx: &egui::Context) {
-    ctx.set_theme(egui::ThemePreference::Light);
-    ctx.style_mut_of(egui::Theme::Light, |style| {
+    ctx.all_styles_mut(|style| {
         style.spacing.item_spacing = vec2(4.0, 4.0);
         style.spacing.button_padding = vec2(5.0, 3.0);
         style.spacing.window_margin = egui::Margin::same(5);
         style.visuals.window_corner_radius = egui::CornerRadius::ZERO;
         style.visuals.menu_corner_radius = egui::CornerRadius::ZERO;
-        style.visuals.window_fill = Color32::from_rgb(248, 248, 248);
-        style.visuals.panel_fill = Color32::from_gray(247);
-        style.visuals.selection.bg_fill = Color32::from_rgb(185, 218, 242);
-        style.visuals.selection.stroke = UiStroke::new(1.0, Color32::from_rgb(35, 102, 157));
         for text in [egui::TextStyle::Body, egui::TextStyle::Button] {
             style.text_styles.insert(text, FontId::proportional(12.0));
         }
@@ -73,6 +72,14 @@ pub(super) fn configure_style(ctx: &egui::Context) {
             .text_styles
             .insert(egui::TextStyle::Heading, FontId::proportional(13.0));
     });
+    ctx.style_mut_of(egui::Theme::Light, |style| {
+        style.visuals.window_fill = Color32::from_rgb(248, 248, 248);
+        style.visuals.panel_fill = Color32::from_gray(247);
+        style.visuals.selection.bg_fill = Color32::from_rgb(185, 218, 242);
+        style.visuals.selection.stroke = UiStroke::new(1.0, Color32::from_rgb(35, 102, 157));
+    });
+    // The editor uses the standard zoom shortcuts for the document.
+    ctx.options_mut(|options| options.zoom_with_keyboard = false);
 }
 
 pub(super) fn icon(
@@ -137,6 +144,22 @@ const WINDOW_NAMES: [&str; 4] = ["Tools", "History", "Layers", "Colors"];
 const WINDOW_ICONS: [&str; 4] = ["tools", "history", "layers", "colors"];
 
 impl PaintApp {
+    pub(super) fn apply_theme(&self, ctx: &egui::Context) {
+        let (theme, window_theme) = if self.workspace.dark_mode {
+            (egui::Theme::Dark, egui::SystemTheme::Dark)
+        } else {
+            (egui::Theme::Light, egui::SystemTheme::Light)
+        };
+        ctx.set_theme(theme);
+        ctx.send_viewport_cmd(egui::ViewportCommand::SetTheme(window_theme));
+        for i in 0..4 {
+            if self.workspace.visible[i] && self.workspace.native[i] {
+                ctx.request_repaint_of(self.native_utility_id(i));
+            }
+        }
+        ctx.request_repaint();
+    }
+
     pub(super) fn restore_preferences(&mut self, storage: Option<&dyn eframe::Storage>) {
         let Some(value) = storage.and_then(|s| s.get_string("workspace-v1")) else {
             return;
@@ -155,6 +178,7 @@ impl PaintApp {
         self.workspace.generation = prefs.generation;
         self.workspace.grid = prefs.grid;
         self.workspace.rulers = prefs.rulers;
+        self.workspace.dark_mode = prefs.dark_mode;
         self.workspace.more_colors = prefs.more_colors;
         self.palette = prefs
             .palette
@@ -193,6 +217,7 @@ impl PaintApp {
             generation: self.workspace.generation,
             grid: self.workspace.grid,
             rulers: self.workspace.rulers,
+            dark_mode: self.workspace.dark_mode,
             more_colors: self.workspace.more_colors,
             primary: self.primary,
             palette: self.palette.clone(),
@@ -539,15 +564,14 @@ impl PaintApp {
                         }
                         let (rect, response) =
                             ui.allocate_exact_size(vec2(68.0, 58.0), Sense::click_and_drag());
-                        ui.painter().rect_filled(
-                            rect,
-                            0.0,
-                            if i == self.active {
-                                Color32::from_rgb(194, 222, 244)
-                            } else {
-                                Color32::from_gray(235)
-                            },
-                        );
+                        let visuals = ui.visuals();
+                        let fill = match (visuals.dark_mode, i == self.active) {
+                            (true, true) => visuals.selection.bg_fill,
+                            (true, false) => visuals.widgets.inactive.bg_fill,
+                            (false, true) => Color32::from_rgb(194, 222, 244),
+                            (false, false) => Color32::from_gray(235),
+                        };
+                        ui.painter().rect_filled(rect, 0.0, fill);
                         if let Some(texture) = &tab.thumbnail {
                             let size = texture.size_vec2();
                             let scale = (52.0 / size.x).min(44.0 / size.y);
@@ -563,7 +587,11 @@ impl PaintApp {
                             ui.painter().rect_stroke(
                                 rect,
                                 0.0,
-                                (1.0, Color32::from_rgb(64, 145, 210)),
+                                if visuals.dark_mode {
+                                    visuals.selection.stroke
+                                } else {
+                                    UiStroke::new(1.0, Color32::from_rgb(64, 145, 210))
+                                },
                                 egui::StrokeKind::Inside,
                             );
                         }
@@ -573,7 +601,7 @@ impl PaintApp {
                                 Align2::LEFT_TOP,
                                 "*",
                                 FontId::proportional(17.0),
-                                Color32::BLACK,
+                                visuals.text_color(),
                             );
                         }
                         let close_rect = Rect::from_min_size(
@@ -581,12 +609,15 @@ impl PaintApp {
                             vec2(15.0, 15.0),
                         );
                         if response.hovered() {
+                            if visuals.dark_mode {
+                                ui.painter().rect_filled(close_rect, 0.0, fill);
+                            }
                             ui.painter().text(
                                 close_rect.center(),
                                 Align2::CENTER_CENTER,
                                 "×",
                                 FontId::proportional(14.0),
-                                Color32::BLACK,
+                                visuals.text_color(),
                             );
                         }
                         if response.clicked() {
@@ -741,6 +772,10 @@ impl PaintApp {
             || self.dropped_files.is_some()
             || self.palette_save.is_some()
     }
+    fn native_utility_id(&self, i: usize) -> egui::ViewportId {
+        egui::ViewportId::from_hash_of(("native-utility", i, self.workspace.generation[i]))
+    }
+
     fn native_utility_window(&mut self, ctx: &egui::Context, i: usize, position: Pos2, size: Vec2) {
         let root = ctx.input(|input| input.viewport().clone());
         let size = match i {
@@ -779,8 +814,7 @@ impl PaintApp {
         if let Some(position) = self.workspace.native_initial_position[i] {
             builder = builder.with_position(position);
         }
-        let id =
-            egui::ViewportId::from_hash_of(("native-utility", i, self.workspace.generation[i]));
+        let id = self.native_utility_id(i);
         ctx.show_viewport_immediate(id, builder, |ui, class| {
             if self.smoke_frames.is_some() && self.frame_count == 0 {
                 eprintln!(
@@ -923,9 +957,9 @@ impl PaintApp {
                 }
                 for (i, (label, applied)) in entries.iter().enumerate() {
                     let text = egui::RichText::new(label).color(if *applied {
-                        Color32::BLACK
+                        ui.visuals().text_color()
                     } else {
-                        Color32::GRAY
+                        ui.visuals().weak_text_color()
                     });
                     if ui.selectable_label(cursor == i + 1, text).clicked() {
                         target = Some(if cursor == i + 1 { i } else { i + 1 });
@@ -990,11 +1024,13 @@ impl PaintApp {
                     }
                     let texture = self.workspace.layer_thumbnails[index].1.clone();
                     let selected = self.editor().document.active == index;
+                    let visuals = ui.visuals();
                     let frame = egui::Frame::new()
-                        .fill(if selected {
-                            Color32::from_rgb(194, 222, 244)
-                        } else {
-                            Color32::from_gray(250)
+                        .fill(match (visuals.dark_mode, selected) {
+                            (true, true) => visuals.selection.bg_fill,
+                            (true, false) => visuals.widgets.noninteractive.bg_fill,
+                            (false, true) => Color32::from_rgb(194, 222, 244),
+                            (false, false) => Color32::from_gray(250),
                         })
                         .inner_margin(4);
                     let row = frame
@@ -1165,17 +1201,18 @@ impl PaintApp {
             ));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.small_button("+").clicked() {
-                    self.zoom = (self.zoom * 1.25).min(16.0);
+                    self.zoom_by_steps(1.0);
                 }
                 ui.add(
-                    egui::Slider::new(&mut self.zoom, 0.05..=16.0)
+                    egui::Slider::new(&mut self.zoom, MIN_ZOOM..=MAX_ZOOM)
                         .logarithmic(true)
                         .show_value(false),
                 );
                 if ui.small_button("−").clicked() {
-                    self.zoom = (self.zoom / 1.25).max(0.05);
+                    self.zoom_by_steps(-1.0);
                 }
-                ui.label(format!("{:.0}%", self.zoom * 100.0));
+                ui.label(format!("{:.0}%", self.zoom * 100.0))
+                    .on_hover_text("Hold Ctrl and scroll over the canvas to zoom");
                 ui.separator();
                 ui.label("px");
                 if let Some((x, y)) = self.workspace.cursor {
@@ -1227,8 +1264,10 @@ impl PaintApp {
             .with_clip_rect(editing);
         let top = Rect::from_min_max(editing.min, pos2(editing.right(), editing.top() + 18.0));
         let left = Rect::from_min_max(editing.min, pos2(editing.left() + 18.0, editing.bottom()));
-        painter.rect_filled(top, 0.0, Color32::from_gray(247));
-        painter.rect_filled(left, 0.0, Color32::from_gray(247));
+        let style = ctx.global_style();
+        let visuals = &style.visuals;
+        painter.rect_filled(top, 0.0, visuals.panel_fill);
+        painter.rect_filled(left, 0.0, visuals.panel_fill);
         // Keep major labels about 50 screen pixels apart at every zoom.
         let desired = 50.0 / self.zoom;
         let magnitude = 10.0_f32.powf(desired.log10().floor());
@@ -1289,7 +1328,7 @@ impl PaintApp {
                     Align2::LEFT_TOP,
                     format!("{value:.0}"),
                     FontId::proportional(9.0),
-                    Color32::from_gray(70),
+                    visuals.text_color(),
                 );
             }
         }
@@ -1315,6 +1354,8 @@ struct Preferences {
     generation: [u64; 4],
     grid: bool,
     rulers: bool,
+    #[serde(default)]
+    dark_mode: bool,
     more_colors: bool,
     primary: Pixel,
     #[serde(default = "default_palette")]

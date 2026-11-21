@@ -17,6 +17,7 @@ for failed_check in ("standard-tests", "validated-package"):
         script = root / "tools/validate-macos.py"
         script.parent.mkdir()
         script.write_bytes(source.read_bytes())
+        (root / "Cargo.toml").write_text('[package]\nversion = "0.1.1"\n')
         (root / "Cargo.lock").write_text("simulated lockfile\n")
         binary = root / "target/release/openpdn"
         binary.parent.mkdir(parents=True)

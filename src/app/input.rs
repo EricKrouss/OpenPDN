@@ -176,7 +176,66 @@ fn change_width(value: f32, increment: bool, coarse: bool) -> f32 {
     (value + if increment { step } else { -step }).clamp(1., 2000.)
 }
 
+pub(super) fn canvas_wheel_zoom(ctx: &egui::Context) -> Option<(egui::Pos2, f32)> {
+    let points_per_line = ctx.options(|options| options.input_options.line_scroll_speed);
+    ctx.input_mut(|input| {
+        let pointer = input.pointer.hover_pos()?;
+        if input.pointer.any_down() {
+            return None;
+        }
+        let mut steps = 0.0;
+        input.events.retain(|event| {
+            if let egui::Event::MouseWheel {
+                unit,
+                delta,
+                modifiers,
+                ..
+            } = event
+                && (modifiers.ctrl || modifiers.command)
+                && delta.y.is_finite()
+            {
+                steps += match unit {
+                    egui::MouseWheelUnit::Point => delta.y / points_per_line,
+                    egui::MouseWheelUnit::Line | egui::MouseWheelUnit::Page => delta.y,
+                };
+                return false;
+            }
+            true
+        });
+        (steps != 0.0).then_some((pointer, steps))
+    })
+}
+
 impl PaintApp {
+    pub(super) fn zoom_by_steps(&mut self, steps: f32) {
+        self.zoom = (self.zoom * ZOOM_STEP.powf(steps)).clamp(MIN_ZOOM, MAX_ZOOM);
+    }
+
+    pub(super) fn zoom_shortcuts(&mut self, ctx: &egui::Context) {
+        if self.stroke.is_some()
+            || ctx.text_edit_focused()
+            || ctx.input(|input| input.pointer.any_down())
+        {
+            return;
+        }
+        let command = Modifiers::COMMAND;
+        let steps = ctx.input_mut(|input| {
+            let zoom_in = input.count_and_consume_key(command, Key::Plus)
+                + input.count_and_consume_key(command, Key::Equals);
+            let zoom_out = input.count_and_consume_key(command, Key::Minus);
+            zoom_in as f32 - zoom_out as f32
+        });
+        if steps != 0.0 {
+            self.zoom_by_steps(steps);
+        }
+        if ctx.input_mut(|input| input.consume_key(command, Key::Num0)) {
+            self.zoom = 1.0;
+        }
+        if ctx.input_mut(|input| input.consume_key(command, Key::B)) {
+            self.workspace.fit_to_window = true;
+        }
+    }
+
     pub(super) fn set_brush_width(&mut self, value: f32) {
         self.brush_size = value.clamp(1., 2000.);
         self.line_options.width = self.brush_size;

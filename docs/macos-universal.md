@@ -1,9 +1,9 @@
 # macOS universal2 builds
 
-The native workflow creates `openpdn-0.1.0-dev-macos-universal2.zip` and its
+The native workflow creates `openpdn-0.1.1-dev-macos-universal2.zip` and its
 `.zip.sha256` checksum. One `OpenPDN.app` contains baseline Intel `x86_64` and
 Apple Silicon `arm64` slices. `arm64e` and `x86_64h` specializations are rejected.
-Linux and Windows package names are unchanged. Thin macOS targets remain
+Package names and application versions come from `Cargo.toml`. Thin macOS targets remain
 available for local validation and troubleshooting.
 
 The deployment target is **macOS 11.0 on both architectures**. CI sets
@@ -119,9 +119,8 @@ the C fixture with `ditto`, verifies its signature and executes its native slice
 only on macOS. Linux fixture tests cannot establish that Apple tools
 will accept an OpenPDN build or that either application slice will run.
 
-The workflow has read-only repository permissions and uploads CI artifacts only.
-It does not publish releases or comment on issues. After committing/pushing this
-branch with authorization, its normal push/PR workflow will run. A manual rerun
-can use `gh workflow run native.yml --ref codex/macos-universal2` after that ref
-exists remotely. Release `0.1.0` remains ARM64-only until a separately authorized
-release is published.
+The workflow uploads CI artifacts. Release publication uses the final ZIPs and
+checksums from a successful run of the release commit, including both packaged
+macOS startup checks. A manual build can use `gh workflow run native.yml --ref main`.
+Release `0.1.1` includes the universal2 package. The earlier `0.1.0` macOS package
+contains an ARM64 slice.

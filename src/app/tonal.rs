@@ -43,7 +43,20 @@ impl TonalControls {
         };
         let (rect, response) = ui.allocate_exact_size(size, Sense::click_and_drag());
         let painter = ui.painter();
-        painter.rect_filled(rect, 0., egui::Color32::from_gray(245));
+        let (background, histogram, curve) = if ui.visuals().dark_mode {
+            (
+                ui.visuals().extreme_bg_color,
+                ui.visuals().widgets.noninteractive.bg_fill,
+                egui::Color32::from_rgb(97, 165, 247),
+            )
+        } else {
+            (
+                egui::Color32::from_gray(245),
+                egui::Color32::from_gray(210),
+                egui::Color32::from_rgb(30, 95, 190),
+            )
+        };
+        painter.rect_filled(rect, 0., background);
         let max = hist[channel].iter().copied().max().unwrap_or(1).max(1) as f32;
         for (i, &v) in hist[channel].iter().enumerate() {
             let x = rect.left() + i as f32;
@@ -53,7 +66,7 @@ impl TonalControls {
                     egui::pos2(x, rect.bottom()),
                     egui::pos2(x, rect.bottom() - h),
                 ],
-                (1., egui::Color32::from_gray(210)),
+                (1., histogram),
             );
         }
         for i in 0..=4 {
@@ -114,10 +127,7 @@ impl TonalControls {
                         )
                     })
                     .collect();
-                painter.add(egui::Shape::line(
-                    line,
-                    (1.5, egui::Color32::from_rgb(30, 95, 190)),
-                ));
+                painter.add(egui::Shape::line(line, (1.5, curve)));
             }
             for &point in points.iter() {
                 painter.circle_filled(to_screen(point), 4., egui::Color32::WHITE);

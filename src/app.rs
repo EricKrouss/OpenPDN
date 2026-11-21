@@ -32,6 +32,11 @@ mod transform;
 mod workspace;
 use effects::EffectDialog;
 use workspace::{LayerProperties, Workspace};
+
+const MIN_ZOOM: f32 = 0.05;
+const MAX_ZOOM: f32 = 16.0;
+const ZOOM_STEP: f32 = 1.25;
+
 fn pointer_press(ctx: &egui::Context) -> Option<(egui::Pos2, egui::PointerButton)> {
     ctx.input(|i| {
         i.events.iter().find_map(|event| match event {
@@ -336,6 +341,7 @@ impl PaintApp {
             text_renderer: Default::default(),
         };
         app.restore_preferences(cc.storage);
+        app.apply_theme(&cc.egui_ctx);
         if std::env::var_os("OPENPDN_FLOAT_UTILITIES")
             .or_else(|| std::env::var_os("OPENDOTNET_FLOAT_UTILITIES"))
             .is_some_and(|v| v == "1")
@@ -552,6 +558,7 @@ impl PaintApp {
         }
     }
     fn shortcuts(&mut self, ctx: &egui::Context) {
+        self.zoom_shortcuts(ctx);
         if self.transform_shortcuts(ctx) {
             return;
         }
@@ -744,16 +751,21 @@ impl PaintApp {
                 }
             });
             ui.menu_button("View", |ui| {
-                if ui.button("Actual size").clicked() {
+                let zoom_button = |label, key| {
+                    egui::Button::new(label).shortcut_text(
+                        ctx.format_shortcut(&egui::KeyboardShortcut::new(Modifiers::COMMAND, key)),
+                    )
+                };
+                if ui.add(zoom_button("Actual size", Key::Num0)).clicked() {
                     self.zoom = 1.0;
                     ui.close();
                 }
-                if ui.button("Zoom in").clicked() {
-                    self.zoom = (self.zoom * 1.25).min(16.0);
+                if ui.add(zoom_button("Zoom in", Key::Plus)).clicked() {
+                    self.zoom_by_steps(1.0);
                     ui.close();
                 }
-                if ui.button("Zoom out").clicked() {
-                    self.zoom = (self.zoom / 1.25).max(0.05);
+                if ui.add(zoom_button("Zoom out", Key::Minus)).clicked() {
+                    self.zoom_by_steps(-1.0);
                     ui.close();
                 }
                 ui.separator();
@@ -790,6 +802,18 @@ impl PaintApp {
                         ui.close();
                     }
                 });
+                if ui.add(zoom_button("Fit to window", Key::B)).clicked() {
+                    self.workspace.fit_to_window = true;
+                    ui.close();
+                }
+                ui.separator();
+                if ui
+                    .checkbox(&mut self.workspace.dark_mode, "Dark mode")
+                    .changed()
+                {
+                    self.apply_theme(&ctx);
+                    ui.close();
+                }
             });
             ui.menu_button("Image", |ui| {
                 if ui
@@ -908,8 +932,6 @@ impl PaintApp {
         let Some(texture) = self.texture else {
             return;
         };
-        let doc = &self.editor().document;
-        let size = Vec2::new(doc.width as f32, doc.height as f32) * self.zoom;
         let canvas_hovered = self
             .workspace
             .canvas
@@ -920,6 +942,30 @@ impl PaintApp {
         let temporary_pan = self.input.temporary_pan();
         let panning = temporary_pan || self.tool == Tool::Pan;
         let editing = editing && !temporary_pan;
+        let viewport = ui.available_rect_before_wrap();
+        let doc = &self.editor().document;
+        let dimensions = Vec2::new(doc.width as f32, doc.height as f32);
+        let fit_to_window = std::mem::take(&mut self.workspace.fit_to_window);
+        if fit_to_window {
+            self.zoom = (viewport.width() / dimensions.x)
+                .min(viewport.height() / dimensions.y)
+                .clamp(MIN_ZOOM, 1.0);
+            ui.ctx().request_repaint();
+        }
+        let previous_zoom = self.zoom;
+        let wheel_anchor = if editing
+            && !fit_to_window
+            && self.stroke.is_none()
+            && ui.rect_contains_pointer(viewport)
+        {
+            input::canvas_wheel_zoom(ui.ctx())
+        } else {
+            None
+        };
+        if let Some((_, steps)) = wheel_anchor {
+            self.zoom_by_steps(steps);
+        }
+        let size = dimensions * self.zoom;
         let mut scroll = egui::ScrollArea::both()
             .id_salt("document-canvas")
             .auto_shrink([false, false])
@@ -932,14 +978,28 @@ impl PaintApp {
                     egui::scroll_area::DragScroll::Never
                 },
             });
-        if let Some(delta) = pan_delta {
-            let offset = egui::scroll_area::State::load(
+        if fit_to_window {
+            scroll = scroll.scroll_offset(Vec2::ZERO);
+        } else if pan_delta.is_some() || self.zoom != previous_zoom {
+            let mut offset = egui::scroll_area::State::load(
                 ui.ctx(),
                 ui.make_persistent_id(egui::IdSalt::new("document-canvas")),
             )
             .unwrap_or_default()
-            .offset
-                - delta;
+            .offset;
+            if let Some((pointer, _)) = wheel_anchor {
+                let previous_size = dimensions * previous_zoom;
+                let previous_padding = (viewport.size() - previous_size).max(Vec2::ZERO) * 0.5;
+                let pointer = pointer - viewport.min;
+                // Center an image that fits and preserve the pointer's image position
+                // on each scrollable axis, as far as the viewport edges allow.
+                let anchor = (pointer + offset - previous_padding) / previous_zoom;
+                offset = (anchor * self.zoom - pointer)
+                    .clamp(Vec2::ZERO, (size - viewport.size()).max(Vec2::ZERO));
+                ui.ctx().request_repaint();
+            } else if let Some(delta) = pan_delta {
+                offset -= delta;
+            }
             scroll = scroll.scroll_offset(offset);
         }
         scroll.show(ui, |ui| {
@@ -1104,7 +1164,7 @@ impl PaintApp {
                     } else if self.tool == Tool::Zoom {
                         self.finish_stroke();
                         self.zoom =
-                            (self.zoom * if secondary { 0.5 } else { 2.0 }).clamp(0.1, 16.0);
+                            (self.zoom * if secondary { 0.5 } else { 2.0 }).clamp(0.1, MAX_ZOOM);
                     } else if self.tool == Tool::Picker {
                         self.picker_press = Some(button);
                         self.pick_color(
@@ -1542,7 +1602,7 @@ impl PaintApp {
                 let valid = crate::document::pixel_count(width, height).is_ok();
                 if !valid {
                     ui.colored_label(
-                        egui::Color32::DARK_RED,
+                        ui.visuals().error_fg_color,
                         "Image exceeds the supported pixel count.",
                     );
                 }
@@ -1681,7 +1741,13 @@ impl eframe::App for PaintApp {
         let central = egui::CentralPanel::default()
             .frame(
                 egui::Frame::new()
-                    .fill(egui::Color32::from_gray(207))
+                    .fill(egui::Color32::from_gray(
+                        if ctx.theme() == egui::Theme::Dark {
+                            31
+                        } else {
+                            207
+                        },
+                    ))
                     .inner_margin(if self.workspace.rulers {
                         egui::Margin {
                             left: 18,

@@ -139,8 +139,10 @@ jobs:
           test "$(uname -m)" = '${{ matrix.arch }}'
           cd artifacts
           shasum -a 256 -c *.zip.sha256
-          ditto -x -k openpdn-0.1.0-dev-macos-universal2.zip extracted
-          app=extracted/openpdn-0.1.0-dev-macos-universal2/OpenPDN.app
+          archives=(*-macos-universal2.zip)
+          test "${#archives[@]}" = 1
+          ditto -x -k "${archives[0]}" extracted
+          app="extracted/${archives[0]%.zip}/OpenPDN.app"
           binary="$app/Contents/MacOS/openpdn"
           test -x "$binary"
           xcrun lipo "$binary" -verify_arch x86_64 arm64

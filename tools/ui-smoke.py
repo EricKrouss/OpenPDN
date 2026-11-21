@@ -201,6 +201,103 @@ try:
     # Native mapping can precede the first GPU presentation, especially while
     # other hardware checks are compiling pipelines. Wait for actual pixels.
     wait_for(lambda: capture("startup-wait.png").getpixel((640,425)) == (255,255,255),30)
+    if os.environ.get("OPENPDN_UI_SCOPE") == "appearance-zoom":
+        def wheel(direction, control=True):
+            if control:
+                modifier("Control_L", True)
+            xtest.fake_input(connection, X.ButtonPress, detail=direction)
+            xtest.fake_input(connection, X.ButtonRelease, detail=direction)
+            if control:
+                modifier("Control_L", False)
+            connection.sync()
+            time.sleep(0.5)
+
+        def marker(image):
+            region = (650, 300, 850, 650)
+            pixels = image.crop(region)
+            points = [(x, y) for y in range(pixels.height) for x in range(pixels.width)
+                      if pixels.getpixel((x, y)) == (0, 0, 0)]
+            assert points, "Zoomed pencil mark is missing"
+            return min(x for x, _ in points) + region[0], min(y for _, y in points) + region[1]
+
+        def zoom_label(image):
+            return image.crop((1090, 830, 1128, 849)).tobytes()
+
+        key("p")
+        click(620, 385)
+        light = capture("view-light.png")
+        assert light.getpixel((620, 385)) == (0, 0, 0)
+        bounds = canvas_bounds(light)
+        click(85, 10)
+        click(108, 220)
+        dark = capture("view-dark.png")
+        for point in [(500, 130), (700, 42), (1100, 290)]:
+            assert max(dark.getpixel(point)) < 64 and min(light.getpixel(point)) > 200
+        assert light.crop(bounds).tobytes() == dark.crop(bounds).tobytes()
+
+        key("Tab")
+        key("equal", ("Control_L", "Shift_L"))
+        zoomed = capture("view-key-plus.png")
+        white_span = longest_run([zoomed.getpixel((x, 425)) == (255, 255, 255)
+                                  for x in range(zoomed.width)])
+        assert white_span == (140, 1140), white_span
+        shortcut("minus")
+        canvas_bounds(capture("view-key-minus.png"))
+        for _ in range(3):
+            shortcut("equal")
+        before = capture("view-before-wheel.png")
+        anchor = marker(before)
+        move(700, 42)
+        wheel(4)
+        assert zoom_label(capture("view-wheel-over-toolbar.png")) == zoom_label(before)
+        move(*anchor)
+        wheel(4)
+        after = capture("view-wheel-in.png")
+        assert zoom_label(after) != zoom_label(before)
+        assert all(abs(a - b) <= 2 for a, b in zip(anchor, marker(after)))
+        wheel(5)
+        restored = capture("view-wheel-out.png")
+        assert zoom_label(restored) == zoom_label(before) and marker(restored) == anchor
+        wheel(5, control=False)
+        scrolled = capture("view-wheel-scroll.png")
+        assert zoom_label(scrolled) == zoom_label(before) and marker(scrolled)[1] < anchor[1]
+        shortcut("z")
+        shortcut("0")
+        actual = capture("view-actual-size.png")
+        canvas_bounds(actual)
+        assert actual.crop(bounds).getextrema() == ((255, 255),) * 3
+        shortcut("equal")
+        shortcut("b")
+        canvas_bounds(capture("view-fit.png"))
+        window.configure(height=560)
+        connection.sync()
+        wait_for(lambda: window.get_geometry().height == 560)
+        shortcut("b")
+        fitted = capture("view-fit-short-window.png")
+        x0, x1 = longest_run([fitted.getpixel((x, 300)) == (255, 255, 255)
+                              for x in range(fitted.width)])
+        y0, y1 = longest_run([fitted.getpixel((640, y)) == (255, 255, 255)
+                              for y in range(fitted.height)])
+        width, height = x1 - x0, y1 - y0
+        assert 0 < height < 600 and abs(width - height * 4 / 3) <= 2, (width, height)
+        window.configure(height=850)
+        connection.sync()
+
+        window.send_event(protocol.event.ClientMessage(
+            window=window.id, client_type=connection.intern_atom("WM_PROTOCOLS"),
+            data=(32, [connection.intern_atom("WM_DELETE_WINDOW"), X.CurrentTime, 0, 0, 0])),
+            event_mask=0)
+        connection.sync()
+        assert process.wait(timeout=15) == 0
+        process = subprocess.Popen(process.args, stdout=log, stderr=log, env=app_env)
+        window = wait_for(find_window)
+        focus_window(window)
+        wait_for(lambda: capture("view-restarted.png").getpixel((500, 130)) == (31, 31, 31))
+        click(85, 10)
+        click(108, 220)
+        wait_for(lambda: capture("view-light-restored.png").getpixel((500, 130)) == (207, 207, 207))
+        print("Dark mode, persisted theme, keyboard zoom, pointer-anchored wheel zoom and plain wheel scrolling passed")
+        raise SystemExit(0)
     if os.environ.get("OPENPDN_UI_SCOPE") == "clipboard":
         from ui_clipboard import ImageClipboard
         test_clipboard=ImageClipboard()

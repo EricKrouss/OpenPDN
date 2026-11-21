@@ -180,9 +180,10 @@ class MergeTests(unittest.TestCase):
                 shutil.copyfile(Path(__file__).with_name(name), root / "tools" / name)
             for name in ("README.md", "Cargo.lock"):
                 (root / name).write_text("Apple-tools integration fixture\n")
+            (root / "Cargo.toml").write_text('[package]\nversion = "0.1.1"\n')
             subprocess.run([sys.executable, str(root / "tools/package-native.py"), "--target", "macos-universal2", "--binary", str(output)], check=True)
             artifacts = root / "artifacts"
-            name = "openpdn-0.1.0-dev-macos-universal2"
+            name = "openpdn-0.1.1-dev-macos-universal2"
             archive = artifacts / (name + ".zip")
             first = archive.read_bytes()
             subprocess.run([sys.executable, str(root / "tools/package-native.py"), "--target", "macos-universal2", "--binary", str(output)], check=True)

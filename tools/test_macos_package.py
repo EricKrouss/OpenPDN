@@ -28,6 +28,7 @@ class PackageTests(unittest.TestCase):
             shutil.copyfile(Path(__file__).with_name(name), self.root / "tools" / name)
         for name in ("README.md", "Cargo.lock", "LICENSE", "docs/status.md"):
             (self.root / name).write_text("Test payload\n")
+        (self.root / "Cargo.toml").write_text('[package]\nversion = "0.1.1"\n')
         self.binary = self.root / "openpdn"
         self.binary.write_bytes(fat())
 
@@ -40,7 +41,7 @@ class PackageTests(unittest.TestCase):
             self.assertFalse(list((self.root / "artifacts").glob("*.zip")))
             return result.stderr
         self.assertEqual(result.returncode, 0, result.stderr)
-        return self.root / "artifacts" / f"openpdn-0.1.0-dev-{target}.{format}"
+        return self.root / "artifacts" / f"openpdn-0.1.1-dev-{target}.{format}"
 
     def test_zip_naming_plist_metadata_permissions_checksum_and_determinism(self):
         archive = self.package()
@@ -52,6 +53,7 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(source.getinfo(f"{name}/{binary_path}").external_attr >> 16, 0o100755)
             self.assertTrue(all(info.date_time == (1980, 1, 1, 0, 0, 0) for info in source.infolist()))
             metadata = json.loads(source.read(f"{name}/build.json"))
+            self.assertEqual(metadata["build"], "0.1.1-dev")
             self.assertEqual(metadata["target"], "macos-universal2")
             self.assertEqual(metadata["architectures"], ["arm64", "x86_64"])
             self.assertEqual(metadata["minimum_macos"], "11.0")
@@ -64,6 +66,8 @@ class PackageTests(unittest.TestCase):
             plist = plistlib.loads(source.read(f"{name}/OpenPDN.app/Contents/Info.plist"))
             self.assertEqual(plist["CFBundleExecutable"], "openpdn")
             self.assertEqual(plist["CFBundleIdentifier"], "dev.openpdn.editor")
+            self.assertEqual(plist["CFBundleShortVersionString"], "0.1.1")
+            self.assertEqual(plist["CFBundleVersion"], "0.1.1")
             self.assertEqual(plist["LSMinimumSystemVersion"], "11.0")
             self.assertEqual(plist["LSMinimumSystemVersionByArchitecture"], {"arm64": "11.0", "x86_64": "11.0"})
             self.assertIn(f"{name}/LICENSE", source.namelist())
@@ -75,7 +79,7 @@ class PackageTests(unittest.TestCase):
         archive = self.package(format="tar.gz")
         before = archive.read_bytes()
         with tarfile.open(archive) as source:
-            member = source.getmember("openpdn-0.1.0-dev-macos-universal2/OpenPDN.app/Contents/MacOS/openpdn")
+            member = source.getmember("openpdn-0.1.1-dev-macos-universal2/OpenPDN.app/Contents/MacOS/openpdn")
             self.assertEqual(member.mode, 0o755)
             self.assertEqual(source.extractfile(member).read(), self.binary.read_bytes())
         self.package(format="tar.gz")
@@ -118,7 +122,7 @@ class PackageTests(unittest.TestCase):
         script = self.root / "tools/package-native.py"
         with mock.patch("macos_binary.adhoc_sign_app", side_effect=simulated_sign), mock.patch.object(sys, "argv", [str(script), "--target", "macos-universal2", "--binary", str(self.binary)]):
             runpy.run_path(str(script), run_name="__main__")
-        archive = self.root / "artifacts/openpdn-0.1.0-dev-macos-universal2.zip"
+        archive = self.root / "artifacts/openpdn-0.1.1-dev-macos-universal2.zip"
         with zipfile.ZipFile(archive) as source:
             prefix = archive.stem + "/"
             metadata = json.loads(source.read(prefix + "build.json"))
